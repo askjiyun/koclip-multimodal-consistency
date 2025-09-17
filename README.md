@@ -22,42 +22,49 @@ Includes training & evaluation scripts for 5-class consistency prediction (0–4
 
 ---
 ## Repository Structure
-> model/
-> baseline/
-> baseline_1_1_clip.py # CLIP similarity baseline 
-> baseline_1_2_koclip.py # koCLIP similarity baseline 
-> baseline_2_1_clip.py # CLIP fine-tuning (frozen CLIP + classifier head)
-> baseline_2_2_koclip.py # koCLIP fine-tuning (frozen koCLIP + classifier head)
-> FT_clip.py # Full fine-tuning / evaluation (CLIP)
-> FT_koclip.py # Full fine-tuning / evaluation (koCLIP)
->
+
+```
+model/
+baseline/
+baseline_1_1_clip.py # CLIP similarity baseline 
+baseline_1_2_koclip.py # koCLIP similarity baseline 
+baseline_2_1_clip.py # CLIP fine-tuning (frozen CLIP + classifier head)
+baseline_2_2_koclip.py # koCLIP fine-tuning (frozen koCLIP + classifier head)
+FT_clip.py # Full fine-tuning / evaluation (CLIP)
+FT_koclip.py # Full fine-tuning / evaluation (koCLIP)
+```
 ---
 ## Requirments
 Create a virtual environment (macOS):
 
-> python -m venv .venv
-> source .venv/bin/activate
-> pip install -r requirements.txt
-
+```
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 - Minimal requirements.txt:
-> torch
-> transformers
-> pandas
-> numpy
-> pillow
-> tqdm
-> scikit-learn
-> matplotlib
-> seaborn
+```
+torch
+transformers
+pandas
+numpy
+pillow
+tqdm
+scikit-learn
+matplotlib
+seaborn
+```
 
 ---
 ## Data Format 
-> Insta Project/
->   data/
->     combined_data.csv
->     image/
->       <image files referenced by CSV>
+```
+Insta Project/
+  data/
+    combined_data.csv
+    image/
+      <image files referenced by CSV>
+```
 
 - combined_data.csv columns:
   - Image Filename: e.g., abc.jpg
@@ -68,28 +75,29 @@ Create a virtual environment (macOS):
 
 ---
 ## Example command (macOS)
-
-> Edit paths inside the script or convert to CLI as needed.
-
+Edit paths inside the script or convert to CLI as needed.
+```
 > # Example: run a fine-tuning baseline (paths inside the script)
-> python model/baseline/baseline_2_2_koclip.py
+ python model/baseline/baseline_2_2_koclip.py
+```
 
 For similarity baselines (threshold search), ensure the CSV/images paths are correct, then:
-
-> python model/baseline/baseline_1_2_koclip.py
-
+```
+ python model/baseline/baseline_1_2_koclip.py
+```
 --- 
 ## Citation
 
 If you use this repository in academic work, please cite:
 
-> @software{askjiyun_koclip_multimodal_consistency_2025,
->   author  = {Jiyoon, Jangmin},
->   title   = {koclip-multimodal-consistency: Reproducible baselines for Korean image–hashtag consistency},
->   year    = {2025},
->   url     = {https://github.com/askjiyun/koclip-multimodal-consistency}
-> }
-
+```
+@software{askjiyun_koclip_multimodal_consistency_2025,
+  author  = {Jiyoon, Jangmin},
+  title   = {koclip-multimodal-consistency: Reproducible baselines for Korean image–hashtag consistency},
+  year    = {2025},
+  url     = {https://github.com/askjiyun/koclip-multimodal-consistency}
+}
+```
 --- 
 ## Acknowledgments
 - Hugging Face Transformers
