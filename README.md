@@ -42,20 +42,26 @@ Experiments are conducted using both CLIP and KoCLIP backbones.
 
 ```
 koclip-multimodal-consistency/
-README.md
-requirements.txt
-data/
-combined_data.csv #Annotated image-hashtag pairs
-categorical_codebook.csv # Mapping table for categorical labels (e.g., Score 1–5 definitions)
-DATA_CODEBOOK.md # Full English data dictionary describing variables and label schema
-model/
-baseline/
-baseline_1_1_clip.py # CLIP similarity baseline 
-baseline_1_2_koclip.py # koCLIP similarity baseline 
-baseline_2_1_clip.py # CLIP fine-tuning (frozen CLIP + classifier head)
-baseline_2_2_koclip.py # koCLIP fine-tuning (frozen koCLIP + classifier head)
-FT_clip.py # CLIP end-to-end fine-tuning
-FT_koclip.py # KoCLIP end-to-end fine-tuning
+│
+├── README.md
+├── requirements.txt
+│
+├── data/
+│ ├── combined_data.csv # Annotated image–hashtag pairs
+│ ├── categorical_codebook.csv # Mapping table for categorical labels (Score 1–5 definitions)
+│ └── DATA_CODEBOOK.md # Full English data dictionary (variable & label schema)
+│
+├── model/
+│ ├── baseline/
+│ │ ├── baseline_1_1_clip.py # CLIP similarity-based baseline
+│ │ ├── baseline_1_2_koclip.py # KoCLIP similarity-based baseline
+│ │ ├── baseline_2_1_clip.py # CLIP (frozen backbone + classifier head)
+│ │ └── baseline_2_2_koclip.py # KoCLIP (frozen backbone + classifier head)
+│ │
+│ ├── FT_clip.py # CLIP end-to-end fine-tuning
+│ └── FT_koclip.py # KoCLIP end-to-end fine-tuning
+│
+└── results/ # Saved checkpoints, metrics, and plots
 ```
 ---
 ## Requirments
@@ -138,10 +144,9 @@ To assess reliability, a subset of samples was manually validated. The agreement
 
 Due to copyright and privacy considerations, the raw image files are not directly included in this repository.
 
-The image dataset can be accessed via the following Google Drive link:
+The image files used in this study are available at:
 
-👉 **Image Dataset (Google Drive)**  
-https://drive.google.com/drive/folders/1XS3ti5qAMHS4pXVlr4gFDfX6M0TO5acn?usp=drive_link
+🔗 **[Download Image Dataset (Google Drive)](https://drive.google.com/drive/folders/1XS3ti5qAMHS4pXVlr4gFDfX6M0TO5acn?usp=drive_link)**
 
 After downloading, place the image files under: `data/image/` and and update the image path in the training scripts accordingly.
 
