@@ -1,0 +1,11 @@
+variable,code,meaning_en
+Score,1,Very low relevance
+Score,2,Low relevance
+Score,3,Medium relevance
+Score,4,High relevance
+Score,5,Very high relevance
+Score_normalized,0,Very low relevance (normalized)
+Score_normalized,1,Low relevance (normalized)
+Score_normalized,2,Medium relevance (normalized)
+Score_normalized,3,High relevance (normalized)
+Score_normalized,4,Very high relevance (normalized)
