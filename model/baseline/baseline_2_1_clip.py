@@ -59,7 +59,7 @@ class CLIPDataset(Dataset):
             image = Image.open(image_path).convert("RGB")
         except Exception as e:
             print(f"Error loading image {image_path}: {e}")
-            # 기본 이미지 생성 (검은색 이미지)
+            # Generate base image (black image)
             image = Image.new('RGB', (224, 224), color='black')
             
         text = row["Hashtag"]
@@ -115,7 +115,7 @@ class FrozenCLIPWithClassifier(nn.Module):
 
 
 def setup_environment():
-    """환경 설정"""
+    """Environmental Settings"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     
@@ -127,10 +127,10 @@ def setup_environment():
 
 
 def load_and_prepare_data(data_path='/Jupyter/Insta/data/combined_data.csv'):
-    """데이터 로드 및 준비"""
+    """Data Loading and Preparation"""
     try:
         df = pd.read_csv(data_path)
-        df['Score'] = df['Score'] - 1  # 0-4로 정규화
+        df['Score'] = df['Score'] - 1  # Normalized to 0-4
         print(f"Data loaded successfully. Shape: {df.shape}")
         print(f"Score distribution:\n{df['Score'].value_counts().sort_index()}")
         return df
@@ -140,10 +140,10 @@ def load_and_prepare_data(data_path='/Jupyter/Insta/data/combined_data.csv'):
 
 
 def train_model(train_dataset, val_dataset, device, config, output_dir, model_name):
-    """단일 모델 학습"""
+    """Single Model Training"""
     print(f"\n[{model_name}] Training started")
     
-    # 모델 초기화
+    # Model Initialization
     model = FrozenCLIPWithClassifier(num_classes=5).to(device)
     optimizer = optim.Adam(
         model.classifier.parameters(), 
@@ -151,21 +151,21 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
         weight_decay=config['weight_decay']
     )
     
-    # 클래스 가중치 적용
+    # Class Weight Application
     criterion = nn.CrossEntropyLoss(weight=config['class_weights'].to(device))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 
-    # 데이터 로더
+    # Data Loader
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'])
 
-    # 학습 기록
+    # Training Record
     train_losses = []
     val_losses = []
     val_accuracies = []
 
     for epoch in range(config['epochs']):
-        # 학습 단계
+        # Training
         model.train()
         train_loss = 0
         train_pbar = tqdm(train_loader, desc=f"{model_name}, Epoch {epoch+1}/{config['epochs']}")
@@ -192,7 +192,7 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
 
         scheduler.step()
 
-        # 검증 단계
+        # Validation
         model.eval()
         val_loss = 0
         correct = 0
@@ -235,7 +235,7 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
               f"Val Loss: {avg_val_loss:.4f}, "
               f"Val Accuracy: {val_accuracy:.4f}")
 
-    # 모델 저장
+    # Save the model 
     model_path = os.path.join(output_dir, f"{model_name.lower().replace(' ', '_')}_classifier.pth")
     torch.save(model.classifier.state_dict(), model_path)
     print(f"Model saved: {model_path}")
@@ -244,7 +244,7 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
 
 
 def prepare_cross_validation(df, K=5):
-    """교차 검증 준비"""
+    """Preparing for cross-validation"""
     skf = StratifiedKFold(n_splits=K, random_state=42, shuffle=True)
     labels = df['Score'].values
     fold_indices = list(skf.split(df, labels))
@@ -257,13 +257,13 @@ def prepare_cross_validation(df, K=5):
 
 
 def train_single_fold(fold, train_dataset, val_dataset, device, config, output_dir):
-    """단일 폴드 학습"""
+    """Single-fold learning"""
     model_name = f"Fold {fold + 1}/{config['K']}"
     model, fold_labels, fold_predictions, train_losses, val_losses, val_accuracies = train_model(
         train_dataset, val_dataset, device, config, output_dir, model_name
     )
     
-    # 폴드별 모델 저장
+    # Save Fold-by-Model
     fold_model_path = os.path.join(output_dir, f"classifier_fold_{fold + 1}.pth")
     torch.save(model.classifier.state_dict(), fold_model_path)
     
@@ -271,8 +271,8 @@ def train_single_fold(fold, train_dataset, val_dataset, device, config, output_d
 
 
 def evaluate_and_save_results(all_labels, all_predictions, method_name, output_dir):
-    """결과 평가 및 저장"""
-    # 메트릭 계산
+    """Result Evaluation and Storage"""
+    # Metric 
     mae = mean_absolute_error(all_labels, all_predictions)
     acc = accuracy_score(all_labels, all_predictions)
     report = classification_report(all_labels, all_predictions)
@@ -285,10 +285,10 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
     print("\nClassification Report:")
     print(report)
 
-    # 파일명 접두사
+    # File name prefix
     prefix = method_name.lower().replace(' ', '_').replace('-', '_')
 
-    # 혼동 행렬 시각화
+    # Confusion Matrix Visualization
     plt.figure(figsize=(8, 6))
     sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", 
                 xticklabels=range(5), yticklabels=range(5))
@@ -302,7 +302,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
     plt.close()
     print(f"Confusion matrix saved: {conf_path}")
 
-    # CSV 파일 저장 (정량 지표)
+    # CSV File Save (Quantitative Metrics)
     metrics_df = pd.DataFrame({
         'Method': [method_name],
         'MAE': [mae],
@@ -314,7 +314,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
     metrics_df.to_csv(csv_path, index=False)
     print(f"Metrics saved: {csv_path}")
 
-    # TXT 파일 저장 (전체 리포트)
+    # Save TXT File (Full Report)
     txt_path = os.path.join(output_dir, f"{prefix}_evaluation_metrics.txt")
     with open(txt_path, "w", encoding='utf-8') as f:
         f.write(f"{method_name} Results\n\n")
@@ -324,7 +324,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
         f.write(report)
     print(f"Results saved: {txt_path}")
 
-    # JSON 파일 저장
+    # Save JSON File
     json_path = os.path.join(output_dir, f"{prefix}_classification_report.json")
     with open(json_path, "w", encoding='utf-8') as f:
         json.dump(report_dict, f, indent=4)
@@ -334,7 +334,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
 
 
 def plot_training_curves(train_losses, val_losses, val_accuracies, method_name, output_dir):
-    """학습 곡선 시각화"""
+    """Learning Curve Visualization"""
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
     
     if isinstance(train_losses[0], list):  # Cross-validation case
@@ -373,36 +373,36 @@ def plot_training_curves(train_losses, val_losses, val_accuracies, method_name, 
 
 
 def data_80_20_split(df, dataset, config, device, output_dir):
-    """8:2 분할 학습 실행"""
+    """8:2 Split Learning Execution"""
     print("\n" + "="*60)
     print("8:2 SPLIT TRAINING")
     print("="*60)
     
-    # 8:2 분할
+    # 8:2 Split 
     train_df, val_df = train_test_split(
         df, test_size=0.2, random_state=42, stratify=df['Score']
     )
     
     print(f"Train samples: {len(train_df)}, Validation samples: {len(val_df)}")
     
-    # 데이터셋 생성
+    # Dataset Generation
     train_indices = train_df.index.tolist()
     val_indices = val_df.index.tolist()
     
     train_dataset = Subset(dataset, train_indices)
     val_dataset = Subset(dataset, val_indices)
     
-    # 모델 학습
+    # Training 
     model, all_labels, all_predictions, train_losses, val_losses, val_accuracies = train_model(
         train_dataset, val_dataset, device, config, output_dir, "8:2 Split"
     )
     
-    # 결과 평가 및 저장
+    # Result Evaluation 
     mae, acc, report_dict = evaluate_and_save_results(
         all_labels, all_predictions, "Baseline 2-1 8:2 Split", output_dir
     )
     
-    # 학습 곡선 저장
+    # Learning Curve Storage
     plot_training_curves(
         train_losses, val_losses, val_accuracies, "Baseline 2-1 8:2 Split", output_dir
     )
@@ -411,12 +411,12 @@ def data_80_20_split(df, dataset, config, device, output_dir):
 
 
 def run_cross_validation(df, dataset, config, device, output_dir):
-    """교차 검증 실행"""
+    """Cross-validation run"""
     print("\n" + "="*60)
     print("K-FOLD CROSS-VALIDATION")
     print("="*60)
     
-    # 교차 검증 준비
+    # Preparing for cross-validation
     fold_indices, labels = prepare_cross_validation(df, config['K'])
     
     dataset_splits = [
@@ -424,7 +424,7 @@ def run_cross_validation(df, dataset, config, device, output_dir):
         for train_idx, val_idx in fold_indices
     ]
     
-    # 교차 검증 실행
+    # Cross-validation 
     all_fold_labels = []
     all_fold_predictions = []
     all_train_losses = []
@@ -441,12 +441,11 @@ def run_cross_validation(df, dataset, config, device, output_dir):
         all_train_losses.append(train_losses)
         all_val_losses.append(val_losses)
         all_val_accuracies.append(val_accuracies)
-        
-        # GPU 메모리 정리
+
         if device == "cuda":
             torch.cuda.empty_cache()
     
-    # 모든 폴드 결과 통합
+    # All fold results combined
     all_labels = []
     all_predictions = []
     
@@ -454,12 +453,12 @@ def run_cross_validation(df, dataset, config, device, output_dir):
         all_labels.extend(labels)
         all_predictions.extend(predictions)
     
-    # 최종 평가 및 결과 저장
+    # Final Evaluation and Results Storage
     mae, acc, report_dict = evaluate_and_save_results(
         all_labels, all_predictions, "Baseline 2-1 Cross-Validation", output_dir
     )
     
-    # 학습 곡선 저장
+    # Learning Curve Storage
     plot_training_curves(
         all_train_losses, all_val_losses, all_val_accuracies, 
         "Baseline 2-1 Cross-Validation", output_dir
@@ -469,19 +468,18 @@ def run_cross_validation(df, dataset, config, device, output_dir):
 
 
 def main():
-    """메인 실행 함수"""
     print("=" * 60)
     print("Baseline 2-1 CLIP Fine-tuning Evaluation")
     print("Both 8:2 Split and K-Fold Cross-Validation")
     print("=" * 60)
     
     try:
-        # 1. 환경 설정
+        # 1. Environment Settings
         device = setup_environment()
         output_dir = "./results/"
         os.makedirs(output_dir, exist_ok=True)
         
-        # 2. 설정
+        # 2. Settings
         config = {
             'K': 5,  # 폴드 수
             'learning_rate': 5e-5,
@@ -490,14 +488,14 @@ def main():
             'weight_decay': 1e-4
         }
         
-        # 3. 데이터 로드
-        # TODO: 아래 경로를 본인의 데이터 경로로 수정하세요
-        data_path = 'path/to/your/combined_data.csv'  # CSV 파일 경로
-        image_folder = 'path/to/your/image/folder'    # 이미지 폴더 경로
+        # 3. Data Load
+        # TODO: Replace the paths below with your own data paths
+        data_path = 'path/to/your/combined_data.csv'  # CSV file path
+        image_folder = 'path/to/your/image/folder'    # Image folder path
         
         df = load_and_prepare_data(data_path)
         
-        # 4. 클래스 가중치 계산
+        # 4. Class Weight Calculation
         labels = df['Score'].values
         class_weights = compute_class_weight(
             class_weight='balanced', 
@@ -507,21 +505,21 @@ def main():
         config['class_weights'] = torch.tensor(class_weights, dtype=torch.float)
         print(f"Class weights: {class_weights}")
         
-        # 5. 데이터셋 및 프로세서 준비
+        # 5. Preparing the dataset and processor
         processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         dataset = CLIPDataset(df, image_folder, processor)
         
-        # 6. 8:2 분할 실행
+        # 6. 8:2 Split Execution
         mae_split, acc_split, report_split = data_80_20_split(
             df, dataset, config, device, output_dir
         )
         
-        # 7. 교차 검증 실행
+        # 7. Cross-validation run
         mae_cv, acc_cv, report_cv = run_cross_validation(
             df, dataset, config, device, output_dir
         )
         
-        # 8. 최종 비교 결과
+        # 8. Final Results Comparison 
         print("\n" + "="*60)
         print("FINAL COMPARISON")
         print("="*60)
@@ -537,7 +535,6 @@ def main():
         print(f"  Macro F1: {report_cv['macro avg']['f1-score']:.4f}")
         print(f"  Weighted F1: {report_cv['weighted avg']['f1-score']:.4f}")
         
-        # 9. 종합 비교 결과 저장
         comparison_df = pd.DataFrame({
             'Method': ['8:2 Split', 'Cross-Validation'],
             'MAE': [mae_split, mae_cv],
