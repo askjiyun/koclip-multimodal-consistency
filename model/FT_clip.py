@@ -61,7 +61,7 @@ from torch.amp import GradScaler, autocast
 import matplotlib.pyplot as plt
 
 
-# Step 1. 데이터셋 정의
+# Step 1. Define the dataset
 class KoreanClipDataset(Dataset):
     def __init__(self, dataframe, image_folder, processor):
         self.data = dataframe
@@ -75,7 +75,7 @@ class KoreanClipDataset(Dataset):
         row = self.data.iloc[idx]
         image_path = f"{self.image_folder}/{row['Image Filename']}"
         text = row['Hashtag']
-        label = row['Score']  # 정답 레이블
+        label = row['Score']  # Ground-truth label
 
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
@@ -87,9 +87,9 @@ class KoreanClipDataset(Dataset):
             text=[text],
             images=image,
             return_tensors="pt",
-            padding="max_length",  # 패딩을 최대 길이로 설정
-            truncation=True,       # 너무 긴 텍스트는 잘라냄
-            max_length=77          # CLIP 모델의 텍스트 최대 길이
+            padding="max_length",  # Pad to the maximum length
+            truncation=True,       # Truncate overly long text
+            max_length=77          # CLIP's maximum text length
         )
         return {
             "pixel_values": inputs["pixel_values"].squeeze(0),
@@ -99,16 +99,16 @@ class KoreanClipDataset(Dataset):
         }
 
 
-# Step 2. 모델 정의 (기존 모델에 분류기를 추가)
+# Step 2. Define the model (add a classifier on top of CLIP)
 class FineTunedCLIP(nn.Module):
     def __init__(self, clip_model_name="openai/clip-vit-base-patch32", num_classes=5, freeze_base=False):
         super(FineTunedCLIP, self).__init__()
         self.clip_model = CLIPModel.from_pretrained(clip_model_name)
 
-        # 텍스트 및 이미지 임베딩 차원 설정
+        # Set the text/image embedding dimension
         embedding_dim = self.clip_model.config.projection_dim
 
-        # 분류기 정의
+        # Define the classifier head
         self.classifier = nn.Sequential(
             nn.Linear(embedding_dim * 2, 256),
             nn.ReLU(),
@@ -116,43 +116,43 @@ class FineTunedCLIP(nn.Module):
             nn.Linear(256, num_classes)
         )
 
-        # CLIP 기본 모델 고정 여부
+        # Optionally freeze the CLIP backbone
         if freeze_base:
             for param in self.clip_model.parameters():
                 param.requires_grad = False
 
     def forward(self, pixel_values, input_ids, attention_mask):
-        # CLIP 모델의 출력
+        # Forward pass through CLIP
         outputs = self.clip_model(
             pixel_values=pixel_values,
             input_ids=input_ids,
             attention_mask=attention_mask
         )
 
-        # 텍스트와 이미지 임베딩 추출
+        # Extract text and image embeddings
         image_embeddings = outputs.image_embeds  # (batch_size, embedding_dim)
         text_embeddings = outputs.text_embeds   # (batch_size, embedding_dim)
 
-        # 텍스트와 이미지 임베딩 결합
+        # Concatenate image and text embeddings
         combined_embeddings = torch.cat((image_embeddings, text_embeddings), dim=1)
 
-        # 분류기로 연관성 점수 예측
+        # Predict consistency score with the classifier
         logits = self.classifier(combined_embeddings)
         return logits
 
 
 def main():
-    # 데이터 로드 및 전처리
-    # TODO: 아래 경로를 본인의 데이터 경로로 수정하세요
-    data_path = 'path/to/your/combined_data.csv'  # CSV 파일 경로
-    image_folder = 'path/to/your/image/folder'    # 이미지 폴더 경로
+    # Load and preprocess data
+    # TODO: Replace the paths below with your own data paths
+    data_path = 'path/to/your/combined_data.csv'  # Path to the CSV file
+    image_folder = 'path/to/your/image/folder'    # Path to the image directory
 
     df = pd.read_csv(data_path)
     
-    # 레이블 정규화 (1-5 -> 0-4)
+    # Normalize labels (1–5 -> 0–4)
     df['Score'] = df['Score'] - 1
 
-    # 모델 및 프로세서 로드
+    # Load model and processor
     clip_model_name = "openai/clip-vit-base-patch32"
     processor = CLIPProcessor.from_pretrained(clip_model_name)
 
@@ -169,25 +169,25 @@ def main():
     train_dataset = KoreanClipDataset(df.loc[train_idx], image_folder, processor)
     test_dataset = KoreanClipDataset(df.loc[test_idx], image_folder, processor)
 
-    # 데이터 로더 생성
+    # Create data loaders
     batch_size = 8
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    # 레이블 분포 확인
+    # Check label distribution
     print("Train Dataset Label Distribution:")
     print(df.loc[train_idx, 'Score'].value_counts().sort_index())
     print("\nTest Dataset Label Distribution:")
     print(df.loc[test_idx, 'Score'].value_counts().sort_index())
     print(f"\nTest Set Size: {len(test_dataset)}")
 
-    # 하이퍼파라미터 설정
+    # Hyperparameters
     learning_rate = 5e-5
     epochs = 20
     weight_decay = 1e-4
     gradient_accumulation_steps = 2
 
-    # 클래스 가중치 계산
+    # Compute class weights
     class_weights = compute_class_weight(
         class_weight='balanced',
         classes=np.unique(df['Score']),
@@ -195,11 +195,11 @@ def main():
     )
     class_weights = torch.tensor(class_weights, dtype=torch.float)
 
-    # 디바이스 설정
+    # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # 모델 초기화
+    # Initialize model
     model = FineTunedCLIP(clip_model_name=clip_model_name, num_classes=5).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
@@ -208,14 +208,14 @@ def main():
     scaler = GradScaler()
     best_val_loss = float('inf')
 
-    # 메트릭 저장용 리스트
+    # Lists to store metrics
     train_losses = []
     val_losses = []
     val_accuracies = []
     val_macro_f1s = []
     val_weighted_f1s = []
 
-    # 학습 루프
+    # Training loop
     for epoch in range(epochs):
         # Training
         model.train()
@@ -277,7 +277,7 @@ def main():
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predicted.cpu().numpy())
 
-        # 에폭별 메트릭 계산 및 저장
+        # Compute and store per-epoch metrics
         epoch_train_loss = train_loss / len(train_loader)
         epoch_val_loss = val_loss / len(val_loader)
         epoch_accuracy = correct / total
@@ -299,14 +299,14 @@ def main():
         print("\nClassification Report:")
         print(classification_report(all_labels, all_predictions))
 
-    # 모델 저장 
+    # Save the trained model
     torch.save(model.state_dict(), "fine_tuned_clip.pth")
     print("모델이 저장되었습니다: fine_tuned_clip.pth")
 
-    # 학습 결과 시각화
+    # Visualize training results
     plt.figure(figsize=(15, 10))
 
-    # 1. Loss 그래프
+    # 1. Loss plot
     plt.subplot(2, 2, 1)
     plt.plot(range(1, epochs+1), train_losses, 'b-', label='Train Loss')
     plt.plot(range(1, epochs+1), val_losses, 'r-', label='Validation Loss')
@@ -316,7 +316,7 @@ def main():
     plt.legend()
     plt.grid(True)
 
-    # 2. Accuracy 그래프
+    # 2. Accuracy plot
     plt.subplot(2, 2, 2)
     plt.plot(range(1, epochs+1), val_accuracies, 'g-')
     plt.title('Validation Accuracy')
@@ -334,7 +334,7 @@ def main():
     plt.legend()
     plt.grid(True)
 
-    # 4. 최종 성능 요약
+    # 4. Final performance summary
     plt.subplot(2, 2, 4)
     final_metrics = {
         'Train Loss': train_losses[-1],
@@ -353,7 +353,7 @@ def main():
     plt.savefig('training_results.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-    # 최종 성능 출력
+    # Print final metrics
     print("\n=== Final Performance Metrics ===")
     print(f"Train Loss: {train_losses[-1]:.4f}")
     print(f"Validation Loss: {val_losses[-1]:.4f}")
@@ -361,7 +361,7 @@ def main():
     print(f"Macro F1 Score: {val_macro_f1s[-1]:.4f}")
     print(f"Weighted F1 Score: {val_weighted_f1s[-1]:.4f}")
 
-    # 최고 성능 출력
+    # Print best epoch metrics
     best_epoch = np.argmin(val_losses) + 1
     print("\n=== Best Performance ===")
     print(f"Best Epoch: {best_epoch}")
