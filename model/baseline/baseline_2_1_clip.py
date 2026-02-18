@@ -115,7 +115,7 @@ class FrozenCLIPWithClassifier(nn.Module):
 
 
 def setup_environment():
-    """Environmental Settings"""
+    """Environment setup"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     
@@ -127,10 +127,10 @@ def setup_environment():
 
 
 def load_and_prepare_data(data_path='/Jupyter/Insta/data/combined_data.csv'):
-    """Data Loading and Preparation"""
+    """Load and prepare data"""
     try:
         df = pd.read_csv(data_path)
-        df['Score'] = df['Score'] - 1  # Normalized to 0-4
+        df['Score'] = df['Score'] - 1  # Normalize to range 0–4
         print(f"Data loaded successfully. Shape: {df.shape}")
         print(f"Score distribution:\n{df['Score'].value_counts().sort_index()}")
         return df
@@ -140,7 +140,7 @@ def load_and_prepare_data(data_path='/Jupyter/Insta/data/combined_data.csv'):
 
 
 def train_model(train_dataset, val_dataset, device, config, output_dir, model_name):
-    """Single Model Training"""
+    """Train a single model"""
     print(f"\n[{model_name}] Training started")
     
     # Model Initialization
@@ -151,7 +151,7 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
         weight_decay=config['weight_decay']
     )
     
-    # Class Weight Application
+    # Apply class weights
     criterion = nn.CrossEntropyLoss(weight=config['class_weights'].to(device))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 
@@ -159,7 +159,7 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'])
 
-    # Training Record
+    # Training logs
     train_losses = []
     val_losses = []
     val_accuracies = []
@@ -244,7 +244,7 @@ def train_model(train_dataset, val_dataset, device, config, output_dir, model_na
 
 
 def prepare_cross_validation(df, K=5):
-    """Preparing for cross-validation"""
+    """Prepare cross-validation"""
     skf = StratifiedKFold(n_splits=K, random_state=42, shuffle=True)
     labels = df['Score'].values
     fold_indices = list(skf.split(df, labels))
@@ -271,8 +271,8 @@ def train_single_fold(fold, train_dataset, val_dataset, device, config, output_d
 
 
 def evaluate_and_save_results(all_labels, all_predictions, method_name, output_dir):
-    """Result Evaluation and Storage"""
-    # Metric 
+    """Evaluate and save results"""
+    # Compute metrics
     mae = mean_absolute_error(all_labels, all_predictions)
     acc = accuracy_score(all_labels, all_predictions)
     report = classification_report(all_labels, all_predictions)
@@ -285,7 +285,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
     print("\nClassification Report:")
     print(report)
 
-    # File name prefix
+    # Filename prefix
     prefix = method_name.lower().replace(' ', '_').replace('-', '_')
 
     # Confusion Matrix Visualization
@@ -302,7 +302,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
     plt.close()
     print(f"Confusion matrix saved: {conf_path}")
 
-    # CSV File Save (Quantitative Metrics)
+    # Save CSV file (quantitative metrics)
     metrics_df = pd.DataFrame({
         'Method': [method_name],
         'MAE': [mae],
@@ -314,7 +314,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
     metrics_df.to_csv(csv_path, index=False)
     print(f"Metrics saved: {csv_path}")
 
-    # Save TXT File (Full Report)
+    # Save TXT file (full report)
     txt_path = os.path.join(output_dir, f"{prefix}_evaluation_metrics.txt")
     with open(txt_path, "w", encoding='utf-8') as f:
         f.write(f"{method_name} Results\n\n")
@@ -324,7 +324,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
         f.write(report)
     print(f"Results saved: {txt_path}")
 
-    # Save JSON File
+    # Save JSON file (classification report)
     json_path = os.path.join(output_dir, f"{prefix}_classification_report.json")
     with open(json_path, "w", encoding='utf-8') as f:
         json.dump(report_dict, f, indent=4)
@@ -334,7 +334,7 @@ def evaluate_and_save_results(all_labels, all_predictions, method_name, output_d
 
 
 def plot_training_curves(train_losses, val_losses, val_accuracies, method_name, output_dir):
-    """Learning Curve Visualization"""
+    """Visualize training curves"""
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
     
     if isinstance(train_losses[0], list):  # Cross-validation case
@@ -373,12 +373,12 @@ def plot_training_curves(train_losses, val_losses, val_accuracies, method_name, 
 
 
 def data_80_20_split(df, dataset, config, device, output_dir):
-    """8:2 Split Learning Execution"""
+    """Run training with 80:20 split"""
     print("\n" + "="*60)
     print("8:2 SPLIT TRAINING")
     print("="*60)
     
-    # 8:2 Split 
+    # 80:20 split
     train_df, val_df = train_test_split(
         df, test_size=0.2, random_state=42, stratify=df['Score']
     )
@@ -402,7 +402,7 @@ def data_80_20_split(df, dataset, config, device, output_dir):
         all_labels, all_predictions, "Baseline 2-1 8:2 Split", output_dir
     )
     
-    # Learning Curve Storage
+    # Save training curves
     plot_training_curves(
         train_losses, val_losses, val_accuracies, "Baseline 2-1 8:2 Split", output_dir
     )
@@ -411,7 +411,7 @@ def data_80_20_split(df, dataset, config, device, output_dir):
 
 
 def run_cross_validation(df, dataset, config, device, output_dir):
-    """Cross-validation run"""
+    """Run cross-validation"""
     print("\n" + "="*60)
     print("K-FOLD CROSS-VALIDATION")
     print("="*60)
@@ -458,7 +458,7 @@ def run_cross_validation(df, dataset, config, device, output_dir):
         all_labels, all_predictions, "Baseline 2-1 Cross-Validation", output_dir
     )
     
-    # Learning Curve Storage
+    # Training Curve Storage
     plot_training_curves(
         all_train_losses, all_val_losses, all_val_accuracies, 
         "Baseline 2-1 Cross-Validation", output_dir
