@@ -44,7 +44,7 @@ warnings.filterwarnings('ignore')
 
 
 def setup_environment():
-    """환경 설정"""
+    """settings"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     
@@ -60,10 +60,10 @@ def setup_environment():
 
 
 def load_and_prepare_data(data_path="path/to/your/combined_data.csv"):
-    """데이터 로드 및 준비"""
+    """Data Load & Preparation"""
     try:
         df = pd.read_csv(data_path)
-        df['Score'] = df['Score'] - 1  # 점수를 0-4로 조정
+        df['Score'] = df['Score'] - 1  # Adjust the score to 0-4
         print(f"Data loaded successfully. Shape: {df.shape}")
         print(f"Score distribution:\n{df['Score'].value_counts().sort_index()}")
         return df
@@ -73,7 +73,7 @@ def load_and_prepare_data(data_path="path/to/your/combined_data.csv"):
 
 
 def get_clip_embeddings(image_path, text, processor, model, device):
-    """CLIP 임베딩 추출 함수"""
+    """CLIP Embedding Extraction Function"""
     try:
         image = Image.open(image_path).convert("RGB")
         inputs = processor(
@@ -97,7 +97,7 @@ def get_clip_embeddings(image_path, text, processor, model, device):
 
 
 def compute_similarities(df_subset, processor, model, device, image_dir="/path/to/your/image/folder"):
-    """유사도와 점수 추출"""
+    """Similarity and Score Extraction"""
     similarities = []
     labels = []
     failed_count = 0
@@ -141,10 +141,10 @@ def compute_similarities(df_subset, processor, model, device, image_dir="/path/t
 
 
 def find_optimal_multiclass_thresholds(similarities, scores, n_combinations=5000):
-    """다중 분류를 위한 최적 threshold 찾기"""
+    """Finding the Optimal Threshold for Multi-Class Classification"""
     print("Finding optimal multiclass thresholds...")
     
-    # threshold 후보 조합 생성
+    # Generate threshold candidate combinations
     np.random.seed(42)
     candidate_thresholds = sorted(np.random.uniform(0.05, 0.95, 100))
     candidate_combinations = list(combinations(candidate_thresholds, 4))
@@ -171,7 +171,7 @@ def find_optimal_multiclass_thresholds(similarities, scores, n_combinations=5000
 
 
 def similarity_to_score_with_threshold(similarity, thresholds):
-    """threshold를 사용한 유사도 → 점수 변환"""
+    """Similarity-to-score conversion using thresholds"""
     if similarity < thresholds[0]:
         return 0
     elif similarity < thresholds[1]:
@@ -185,7 +185,7 @@ def similarity_to_score_with_threshold(similarity, thresholds):
 
 
 def similarity_to_score_simple(sim):
-    """단순한 유사도 → 점수 매핑"""
+    """Simple similarity-to-score mapping"""
     if sim < 0.2:
         return 0
     elif sim < 0.4:
@@ -199,7 +199,7 @@ def similarity_to_score_simple(sim):
 
 
 def evaluate_and_save(name, y_true, y_pred, output_dir="./results/", thresholds=None):
-    """평가 및 결과 저장"""
+    """Evaluation and result saving"""
     os.makedirs(output_dir, exist_ok=True)
     
     mae = mean_absolute_error(y_true, y_pred)
@@ -208,7 +208,7 @@ def evaluate_and_save(name, y_true, y_pred, output_dir="./results/", thresholds=
     report_dict = classification_report(y_true, y_pred, output_dict=True)
     conf_matrix = confusion_matrix(y_true, y_pred)
 
-    # 혼동 행렬 시각화 저장
+    # Save confusion matrix visualization
     plt.figure(figsize=(8, 6))
     sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", 
                 xticklabels=range(5), yticklabels=range(5))
@@ -222,7 +222,7 @@ def evaluate_and_save(name, y_true, y_pred, output_dir="./results/", thresholds=
     plt.close()
     print(f"Confusion matrix saved: {conf_filename}")
 
-    # 텍스트 리포트 저장
+    # Save text report
     txt_filename = os.path.join(output_dir, f"{name.replace(' ', '_').lower()}_results.txt")
     with open(txt_filename, "w", encoding='utf-8') as f:
         f.write(f"Baseline 1-1 Evaluation Result: {name}\n\n")
@@ -234,7 +234,7 @@ def evaluate_and_save(name, y_true, y_pred, output_dir="./results/", thresholds=
         f.write(report)
     print(f"Results saved: {txt_filename}")
 
-    # CSV 저장
+    # Save CSV file
     csv_filename = os.path.join(output_dir, f"{name.replace(' ', '_').lower()}_metrics.csv")
     summary_df = pd.DataFrame({
         "Method": [name],
@@ -250,7 +250,7 @@ def evaluate_and_save(name, y_true, y_pred, output_dir="./results/", thresholds=
 
 
 def save_embeddings(train_sims, train_scores, val_sims, val_scores, output_dir="./results/"):
-    """임베딩 결과 저장"""
+    """Save embedding results"""
     os.makedirs(output_dir, exist_ok=True)
     
     np.save(os.path.join(output_dir, "train_similarities.npy"), np.array(train_sims))
@@ -262,51 +262,50 @@ def save_embeddings(train_sims, train_scores, val_sims, val_scores, output_dir="
 
 
 def main():
-    """메인 실행 함수"""
     print("=" * 60)
     print("Baseline CLIP Model Evaluation")
     print("=" * 60)
     
     try:
-        # 1. 환경 설정
+        # 1. Environment Setup
         device, model, processor = setup_environment()
         
-        # 2. 데이터 로드
+        # 2. Load data
         df = load_and_prepare_data()
         
-        # 3. 훈련/검증 분리
+        # 3. train/valiation split
         train_df, val_df = train_test_split(
             df, stratify=df['Score'], test_size=0.2, random_state=42
         )
         print(f"Train samples: {len(train_df)}, Validation samples: {len(val_df)}")
         
-        # 4. 훈련 데이터 처리
+        # 4. Process training data
         print("\n" + "="*40)
         print("Processing Training Data")
         print("="*40)
         train_sims, train_scores = compute_similarities(train_df, processor, model, device)
         
-        # 5. 검증 데이터 처리
+        # 5. Process validation data
         print("\n" + "="*40)
         print("Processing Validation Data") 
         print("="*40)
         val_sims, val_scores = compute_similarities(val_df, processor, model, device)
         
-        # 6. 임베딩 저장
+        # 6. Save embeddings
         save_embeddings(train_sims, train_scores, val_sims, val_scores)
         
-        # 7. 다중 분류를 위한 최적 threshold 찾기
+        # 7. Find optimal thresholds for multiclass classification
         print("\n" + "="*40)
         print("Finding Optimal Multiclass Thresholds")
         print("="*40)
         best_thresholds = find_optimal_multiclass_thresholds(train_sims, train_scores)
         
-        # 8. 평가 및 결과 저장
+        # 8. Evaluate and save results
         print("\n" + "="*40)
         print("Multiclass Evaluation Results")
         print("="*40)
         
-        # Threshold 기반 예측
+        # Threshold-based prediction
         val_pred_scores_thresh = [similarity_to_score_with_threshold(s, best_thresholds) for s in val_sims]
         mae1, acc1, _ = evaluate_and_save(
             name="Baseline 1-1 Threshold-Based",
@@ -315,7 +314,7 @@ def main():
             thresholds=best_thresholds
         )
         
-        # 단순 매핑 기반 예측
+        # Simple-mapping prediction
         val_pred_scores_simple = [similarity_to_score_simple(sim) for sim in val_sims]
         mae2, acc2, _ = evaluate_and_save(
             name="Baseline 1-1 Simple-Mapping",
@@ -323,7 +322,7 @@ def main():
             y_pred=val_pred_scores_simple
         )
         
-        # 최종 요약
+        # Final summary
         print("\n" + "="*60)
         print("FINAL SUMMARY")
         print("="*60)
