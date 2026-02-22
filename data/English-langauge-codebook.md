@@ -21,7 +21,7 @@
 
 - **Type:** string
 - **Description:** A single hashtag text associated with the image.
-- **Example:** `헬스`, `오운완`, `청주`
+- **Example:** `맛집(Restaurant)`, `오운완(WorkoutDone)`, `여행(Travel)`
 
 ### 3) `Score`
 
