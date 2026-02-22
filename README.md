@@ -49,7 +49,7 @@ koclip-multimodal-consistency/
 ├── data/
 │ ├── combined_data.csv # Annotated image–hashtag pairs
 │ ├── categorical_codebook.csv # Mapping table for categorical labels (Score 1–5 definitions)
-│ └── DATA_CODEBOOK.md # Full English data dictionary (variable & label schema)
+│ └── English-language-codebook.md # Full English data dictionary (variable & label schema)
 │
 ├── model/
 │ ├── baseline/
