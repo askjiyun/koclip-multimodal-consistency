@@ -4,7 +4,7 @@
 
 - **Filename:** `combined_data.csv`
 - **Rows:** 2,022
-- **Columns:** 3
+- **Columns:** 4
 - **Text encoding:** UTF-8 
 - **Language Note:**  
   The `Hashtag` column may contain Korean and other non-English text, as the dataset was constructed to train and evaluate Korean-specialized multimodal models (e.g., koCLIP).  
