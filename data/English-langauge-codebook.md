@@ -26,8 +26,6 @@
 - **Description:** A single hashtag associated with the image.
 
 The hashtag text may include Korean words, slang, neologisms, or mixed-language expressions. This reflects real-world Instagram usage and was intentionally preserved to support training and evaluation of Korean-language multimodal models.
-
-English translations of frequently used Korean hashtags are provided in the glossary section below.
 - **Example:** `맛집(Restaurant)`, `오운완(WorkoutDone)`, `여행(Travel)`
 
 ### 3) `Score`
