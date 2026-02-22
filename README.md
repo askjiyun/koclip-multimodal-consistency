@@ -121,6 +121,11 @@ The main data file `data/combined_data.csv` contains the following columns:
 | `Image Filename` | string | Filename of the image (e.g., `abc.jpg`). Identical numeric identifiers correspond to the same image instance. |
 | `Hashtag` | string | Korean hashtag text associated with the image |
 | `Score` | integer (1–5) | Semantic consistency score between the image and hashtag |
+| `Hashtag_en` | string | English translation of the original `Hashtag` column. Provided for interpretability and reference purposes only. |
+
+**Important Note:**  
+The experimental models described in this study were trained using the original `Hashtag` column.  
+The `Hashtag_en` column is included solely to help non-Korean-speaking readers understand the semantic meaning of each hashtag and does not affect the training pipeline.
 
 ---
 
